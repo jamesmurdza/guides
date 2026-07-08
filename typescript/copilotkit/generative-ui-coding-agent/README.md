@@ -15,8 +15,8 @@ A [CopilotKit](https://docs.showcase.copilotkit.ai/) Built-in Agent backed by a 
 Clone the repository and switch into the guide:
 
 ```bash
-git clone https://github.com/daytonaio/daytona.git
-cd daytona/guides/typescript/copilotkit/generative-ui-coding-agent
+git clone https://github.com/daytona/guides.git
+cd guides/typescript/copilotkit/generative-ui-coding-agent
 ```
 
 Copy `.env.example` to `.env` and fill in your keys:

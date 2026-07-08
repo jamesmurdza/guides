@@ -18,7 +18,7 @@ The Docker backend can also run standalone without a veRL checkout.
 From your veRL environment:
 
 ```bash
-cd /path/to/daytona/guides/python/reinforcement-learning/verl-retool
+cd /path/to/guides/python/reinforcement-learning/verl-retool
 pip install -e .
 ```
 

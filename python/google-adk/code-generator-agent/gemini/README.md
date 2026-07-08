@@ -105,7 +105,7 @@ The agent has already tested this code in the sandbox before returning it, so yo
 
 ## API Reference
 
-For the complete API reference, see the [daytona-adk documentation](https://github.com/daytonaio/daytona-adk-plugin#available-tools).
+For the complete API reference, see the [daytona-adk documentation](https://github.com/daytona/integrations/tree/main/packages/adk-plugin).
 
 ## License
 
