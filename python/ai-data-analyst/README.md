@@ -1,4 +1,4 @@
-# LiteLLM Data Analysis Example (LiteLLM + Daytona)
+# AI Data Analyst (LiteLLM + Daytona)
 
 ## Overview
 
@@ -77,8 +77,8 @@ Create a `.env` file in the project directory with the appropriate variables for
 
 The main prompt is configured in the `user_prompt` variable in `ai_data_analyst.py`:
 
-```typescript
-const userPrompt = `Give the three highest revenue products for the month of January and show them as a bar chart.`;
+```python
+user_prompt = "Give the three highest revenue products for the month of January and show them as a bar chart."
 ```
 
 You can modify this to analyze different aspects of the data or try different visualization types.
@@ -90,7 +90,7 @@ The example uses `cafe_sales_data.csv`. To use your own dataset, replace this fi
 By default, the example uses the following models, as specified in `ai_data_analyst.py`:
 
 ```python
-CODING_MODEL = "anthropic/claude-sonnet-4-0"
+CODING_MODEL = "anthropic/claude-sonnet-4-6"
 SUMMARY_MODEL = "anthropic/claude-haiku-4-5"
 ```
 
