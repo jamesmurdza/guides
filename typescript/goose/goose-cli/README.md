@@ -95,6 +95,24 @@ The Secret-based flow needs `@daytona/sdk` 0.192.0 or newer and a one-time Secre
 
 Inside the sandbox, `env` now shows `OPENAI_API_KEY=dtn_secret_...`, yet Goose still authenticates: it sends the key as the `Authorization` HTTPS request header to `api.openai.com`, where the proxy swaps in the real value. Substitution happens only in HTTPS request headers toward allowed hosts - requests to any other host carry the harmless placeholder. See the [Secrets documentation](https://www.daytona.io/docs/en/secrets/) for the full substitution scope.
 
+## Example Output
+
+```
+$ npm run start
+Creating sandbox...
+Installing Goose CLI...
+Starting Goose CLI...
+
+Agent ready. Press Ctrl+C at any time to exit.
+
+User: start a simple python web server
+I've set up a script to start a simple Python web server. You can access it via this URL: Simple Python Web Server (https://8000-91110758-0d18-429c-a0f3-5ac9b82f450a.daytonaproxy01.net).
+Running `python3 -m http.server` via session command...
+User:
+```
+
+> **Why does "Running ..." print after the reply?** Goose was told (via the system prompt) to write the server command to `start.sh` and hand back the preview URL, trusting the script to actually start it right after - it never runs the server itself. So the assistant's text always lands first, and the "Running `<command>` via session command..." line - our own log, printed once the script detects and executes `start.sh` - always comes after. The server itself keeps running in the background for the rest of the session.
+
 ## References
 
 - [Goose Documentation](https://block.github.io/goose/docs/)
