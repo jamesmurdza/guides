@@ -34,9 +34,16 @@ export class GooseSession {
   // Goose continues its most recent session (there is no explicit session/thread ID
   // to track - unlike Amp or Gemini, Goose resume is just "continue the last one").
   private resumable = false
-  // Detail from a wrapped provider error, stashed by handleEvent's "message" case for
-  // the "complete" case to report.
+  // Detail from a wrapped provider error, stashed by flushPendingText for the
+  // "complete" case to report.
   private pendingError: string | null = null
+  // Assistant text accumulates here instead of being written the instant each chunk
+  // arrives. Goose's stream-json splits a single reply across multiple "message"
+  // events - e.g. "[here]" and "(url)." can land in separate events - so rendering
+  // (and error-detecting) each fragment independently would see broken markdown and
+  // a link's brackets/parens printed literally. Flushed at natural boundaries (a
+  // tool call starting, or the turn completing) where a fragment is known to be whole.
+  private pendingText = ''
   // Sent via --system on the first turn only; Goose carries it forward as part of
   // the session it resumes from then on, so it is not resent on later turns.
   private systemPrompt: string | null = null
@@ -48,6 +55,22 @@ export class GooseSession {
     return `'${s.replace(/'/g, "'\\''")}'`
   }
 
+  // Renders and prints (or, if it turns out to be a wrapped provider error,
+  // stashes) whatever assistant text has accumulated so far. Only call this at a
+  // point where pendingText is known to be a complete fragment - never mid-stream.
+  private flushPendingText(): void {
+    if (!this.pendingText) return
+    const text = this.pendingText
+    this.pendingText = ''
+
+    const errMatch = text.match(GOOSE_ERROR_TEXT)
+    if (errMatch) {
+      this.pendingError = errMatch[1].trim()
+      return
+    }
+    process.stdout.write(renderMarkdown(text))
+  }
+
   private handleEvent(event: GooseEvent): void {
     switch (event.type) {
       case 'message': {
@@ -56,15 +79,12 @@ export class GooseSession {
 
         for (const block of msg.content) {
           if (block.type === 'text') {
-            const errMatch = block.text.match(GOOSE_ERROR_TEXT)
-            if (errMatch) {
-              this.pendingError = errMatch[1].trim()
-              continue
-            }
-            process.stdout.write(renderMarkdown(block.text))
+            this.pendingText += block.text
           } else if (block.type === 'tool_use') {
+            this.flushPendingText()
             process.stdout.write(`\n[tool] ${block.name}\n`)
           } else if (block.type === 'tool_result' && block.is_error) {
+            this.flushPendingText()
             const content = block.content
             const output =
               typeof content === 'string'
@@ -84,6 +104,7 @@ export class GooseSession {
         // A turn ran to completion - even a wrapped provider error still creates a
         // resumable session, so this is the right place to flip the flag.
         this.resumable = true
+        this.flushPendingText()
         if (this.pendingError) {
           process.stderr.write(`\nFailed: ${this.pendingError}\n`)
           this.pendingError = null
