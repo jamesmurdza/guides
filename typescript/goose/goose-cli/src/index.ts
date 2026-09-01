@@ -10,6 +10,11 @@ import { GooseSession } from './session.js'
 
 dotenv.config()
 
+function formatCommandPreview(input: string, maxLength = 80): string {
+  const normalized = input.replace(/\s+/g, ' ').trim()
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}...` : normalized
+}
+
 async function main() {
   const apiKey = process.env.DAYTONA_API_KEY
   if (!apiKey) {
@@ -28,12 +33,16 @@ async function main() {
 
   let sandbox: Sandbox | undefined
   let session: GooseSession | undefined
+  const serverSessions: string[] = []
 
   const cleanup = async (exitCode = 0) => {
     try {
       console.log('\nCleaning up...')
       if (session) await session.cleanup()
-      if (sandbox) await sandbox.delete()
+      if (sandbox) {
+        await Promise.allSettled(serverSessions.map((id) => sandbox!.process.deleteSession(id)))
+        await sandbox.delete()
+      }
     } catch (e) {
       console.error('Error during cleanup:', e)
     } finally {
@@ -60,6 +69,8 @@ async function main() {
       },
     })
 
+    const activeSandbox = sandbox
+
     process.once('SIGINT', () => cleanup())
 
     console.log('Installing Goose CLI...')
@@ -67,16 +78,52 @@ async function main() {
     // it, the script tries to run that interactively - `[ -r /dev/tty ]` reports true
     // in the sandbox's exec environment even though there is no real controlling
     // terminal attached, so the read fails instead of falling back cleanly.
-    const install = await sandbox.process.executeCommand(
+    const install = await activeSandbox.process.executeCommand(
       'curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash',
     )
     if (install.exitCode !== 0) {
       throw new Error('Error installing Goose CLI: ' + install.result)
     }
 
+    // Daytona-aware system prompt, passed to Goose via its native --system flag.
+    // We ask Goose to write server commands to start.sh instead of running them,
+    // because `goose run` is a one-shot blocking command per turn: a foreground dev
+    // server would never exit, so the turn (and the whole prompt loop) would hang.
+    const previewLink = await activeSandbox.getPreviewLink(1234)
+    const previewUrlPattern = previewLink.url.replace(/1234/, '{PORT}')
+    const defaultSystemPrompt = [
+      'You are running in a Daytona sandbox.',
+      `When running services on localhost, they will be accessible as: ${previewUrlPattern}`,
+      'When you need to start a server, DO NOT run it directly.',
+      'Instead, write only the server start command to /home/daytona/start.sh (one command, no markdown).',
+      'After writing the start command, provide the preview URL to the user.',
+    ].join(' ')
+
     console.log('Starting Goose CLI...\n')
-    session = new GooseSession(sandbox)
-    await session.initialize()
+    session = new GooseSession(activeSandbox)
+    await session.initialize({ systemPrompt: defaultSystemPrompt })
+
+    const startServerFromScript = async () => {
+      // Only run when Goose has produced a start script for this turn.
+      const startScriptCheck = await activeSandbox.process.executeCommand('test -f /home/daytona/start.sh')
+      if (startScriptCheck.exitCode !== 0) {
+        return
+      }
+
+      const startScriptContents = (await activeSandbox.fs.downloadFile('/home/daytona/start.sh')).toString('utf-8')
+      const clippedStartScript = formatCommandPreview(startScriptContents)
+      console.log(`Running \`${clippedStartScript}\` via session command...`)
+      // Execute server startup outside Goose so long-running/background commands
+      // do not keep the turn (and `goose run`) from completing.
+      const sessionId = `goose-server-session-${Date.now()}`
+      await activeSandbox.process.createSession(sessionId)
+      serverSessions.push(sessionId)
+
+      await activeSandbox.process.executeSessionCommand(sessionId, {
+        command: 'cd /home/daytona && chmod +x start.sh && ./start.sh',
+        runAsync: true,
+      })
+    }
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
     rl.once('SIGINT', () => cleanup())
@@ -87,6 +134,7 @@ async function main() {
       const prompt = await new Promise<string>((resolve) => rl.question('User: ', resolve))
       if (prompt.trim()) {
         await session.processPrompt(prompt)
+        await startServerFromScript()
       }
     }
   } catch (error) {

@@ -36,6 +36,9 @@ export class GooseSession {
   // Detail from a wrapped provider error, stashed by handleEvent's "message" case for
   // the "complete" case to report.
   private pendingError: string | null = null
+  // Sent via --system on the first turn only; Goose carries it forward as part of
+  // the session it resumes from then on, so it is not resent on later turns.
+  private systemPrompt: string | null = null
 
   constructor(private sandbox: Sandbox) {}
 
@@ -112,7 +115,7 @@ export class GooseSession {
     }
   }
 
-  async initialize(): Promise<void> {
+  async initialize(options?: { systemPrompt?: string }): Promise<void> {
     this.ptyHandle = await this.sandbox.process.createPty({
       id: `goose-pty-${Date.now()}`,
       cols: 120,
@@ -123,13 +126,21 @@ export class GooseSession {
     // Goose installs to ~/.local/bin, which a fresh shell may not have on PATH.
     // Exported once here since this PTY (and its shell) is reused for every turn.
     await this.ptyHandle.sendInput('export PATH="$HOME/.local/bin:$PATH"\n')
+
+    if (options?.systemPrompt?.trim()) {
+      this.systemPrompt = options.systemPrompt.trim()
+    }
   }
 
   // Run a single headless turn and resolve once Goose emits its "complete" event.
   async processPrompt(prompt: string): Promise<void> {
     const flags = ['run', '--output-format', 'stream-json', '--text', this.shellQuote(prompt)]
-    // Goose resumes the most recent session; there is no ID to pass explicitly.
-    if (this.resumable) flags.push('--resume')
+    if (this.resumable) {
+      // Goose resumes the most recent session; there is no ID to pass explicitly.
+      flags.push('--resume')
+    } else if (this.systemPrompt) {
+      flags.push('--system', this.shellQuote(this.systemPrompt))
+    }
     const command = ['goose', ...flags].join(' ')
     debug('running:', command)
 
