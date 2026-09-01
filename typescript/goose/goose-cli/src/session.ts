@@ -5,6 +5,7 @@
 
 import { Sandbox, PtyHandle } from '@daytona/sdk'
 import { GooseEvent, GooseMessageEvent, GooseErrorEvent } from './types.js'
+import { renderMarkdown } from './utils.js'
 
 const WORK_DIR = '/home/daytona'
 
@@ -60,7 +61,7 @@ export class GooseSession {
               this.pendingError = errMatch[1].trim()
               continue
             }
-            process.stdout.write(block.text)
+            process.stdout.write(renderMarkdown(block.text))
           } else if (block.type === 'tool_use') {
             process.stdout.write(`\n[tool] ${block.name}\n`)
           } else if (block.type === 'tool_result' && block.is_error) {

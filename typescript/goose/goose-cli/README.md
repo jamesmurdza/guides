@@ -6,7 +6,7 @@ A headless coding agent powered by [Goose](https://block.github.io/goose/) (Bloc
 
 - **Secure sandbox execution:** The Goose CLI and any code it runs stay inside an isolated Daytona sandbox.
 - **Fully headless:** Runs non-interactively with a fixed provider/model and auto-approved tool calls - no setup wizard, no permission prompts.
-- **Streaming output:** Parses the CLI's `stream-json` events for real-time message and tool activity.
+- **Streaming output:** Parses the CLI's `stream-json` events for real-time message and tool activity, rendering basic markdown (bold, italic, inline code, links) as ANSI in the terminal.
 - **Session continuity:** Reuses Goose's most recent session across prompts (`--resume`) for multi-turn context.
 - **Preview URLs for servers:** A Daytona-aware system prompt tells Goose to write server-start commands to a script instead of running them, so they can be started outside the turn and exposed via a Daytona preview URL.
 
