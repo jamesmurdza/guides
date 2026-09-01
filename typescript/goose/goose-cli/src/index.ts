@@ -63,8 +63,12 @@ async function main() {
     process.once('SIGINT', () => cleanup())
 
     console.log('Installing Goose CLI...')
+    // CONFIGURE=false skips the installer's trailing `goose configure` step. Without
+    // it, the script tries to run that interactively - `[ -r /dev/tty ]` reports true
+    // in the sandbox's exec environment even though there is no real controlling
+    // terminal attached, so the read fails instead of falling back cleanly.
     const install = await sandbox.process.executeCommand(
-      'curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash',
+      'curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash',
     )
     if (install.exitCode !== 0) {
       throw new Error('Error installing Goose CLI: ' + install.result)
