@@ -16,6 +16,7 @@ This example demonstrates building, running, and testing a real macOS app end-to
 - **Automated test run with parsed results:** `xcodebuild test` output is parsed into a clean pass/fail summary, with a non-zero exit code on failure
 - **Screenshot for manual verification:** After launch, a full-screen screenshot of the sandbox is downloaded, since the test suite proves the app's logic but not that its UI actually renders correctly
 - **Optional full session recording:** Set `RECORD_SESSION=true` to record the whole run and download it as `recording.mp4`
+- **Real example artifacts included:** [`example-screenshot.png`](example-screenshot.png) and [`example-recording.mp4`](example-recording.mp4) from an actual run are checked into this folder (see [Example Output](#example-output))
 
 ## Prerequisites
 
@@ -96,11 +97,12 @@ Set `RECORD_SESSION=true` in your `.env` file to record the entire sandbox sessi
 
 ## Example Output
 
-This is the actual console output from a real run against a use.computer Mac Mini reservation (raw `xcodebuild`/`brew` output in between is trimmed for readability — the script itself doesn't suppress it):
+This is the actual console output from a real run against a use.computer Mac Mini reservation, with `RECORD_SESSION=true` (raw `xcodebuild`/`brew` output in between is trimmed for readability — the script itself doesn't suppress it):
 
 ```
 Creating a macOS sandbox...
-Sandbox ready. Watch it live at: https://api.use.computer/vnc?sandbox=sb-0f23f7b4b1f6c0aa33d4a7f53294eacd&token=***
+Sandbox ready. Watch it live at: https://api.use.computer/vnc?sandbox=sb-766888fb7cac1d256fcf1cccc239c020&token=***
+Recording started: rec-fe4bbf81387d8dee
 Xcode 26.4.1
 Build version 17E202
 Uploading project files...
@@ -122,13 +124,17 @@ Test Results
 [PASS] CounterAppTests.testIncrement (0.001s)
 [PASS] CounterAppTests.testIncrementThenDecrement (0.001s)
 ------------
-SUCCEEDED: executed 3, 0 failures (0 unexpected), 0.002s
+SUCCEEDED: executed 3, 0 failures (0 unexpected), 0.003s
+Stopping recording...
+✓ Recording saved to recording.mp4
 Closing sandbox...
 ```
 
 Open [`screenshot.png`](example-screenshot.png) to see the app running as a native window on the sandbox desktop, and unzip `TestResults.xcresult.zip` (or open it directly in Xcode) to inspect the full test report.
 
-If `RECORD_SESSION=true`, `recording.mp4` captures a screen recording of the session.
+### Recording
+
+[`example-recording.mp4`](example-recording.mp4) is the actual `recording.mp4` from the run above, capturing the entire sandbox session — Xcode project generation, the build, the app launching, and the test run — useful for a full visual audit beyond the screenshot above. (This and `example-screenshot.png` above are checked into the repo purely to illustrate output; the script itself always writes to `screenshot.png`/`recording.mp4`, which are gitignored.)
 
 ## License
 
